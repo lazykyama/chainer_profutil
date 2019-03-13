@@ -7,22 +7,32 @@ from cupy import prof
 from cupy.cuda import runtime
 
 
+_fwd_argb_color = 0xff76b900
+_bwd_argb_color = 0xff7fdbff
+_upd_argb_color = 0xffe60012
+
 def _try_to_sync_if_needed(self):
     if self._sync:
         runtime.deviceSynchronize()
+
+def _colored_range_push_if_exists(msg, argb_color):
+    if argb_color is None:
+        cuda.nvtx.RangePush(msg)
+    else:
+        cuda.nvtx.RangePushC(msg, argb_color)
 
 class UpdateProfileMarkPreHook(object):
     name = 'preupdate'
     call_for_each_param = False
     timing = 'pre'
 
-    def __init__(self, sync=True, argb_color=0xff00ff00):
+    def __init__(self, sync=True, argb_color=None):
         self._sync = sync
         self._argb_color = argb_color
 
     def __call__(self, rule):
         _try_to_sync_if_needed(self)
-        cuda.nvtx.RangePushC('update', self._argb_color)
+        _colored_range_push_if_exists('update', self._argb_color)
 
 class UpdateProfileMarkPostHook(object):
     name = 'postupdate'
@@ -41,31 +51,34 @@ class FwdBwdProfileMarkHook(CUDAProfileHook):
 
     name = 'FwdBwdProfileMarkHook'
 
-    def __init__(self, sync=True):
+    def __init__(self, sync=True, argb_color=None):
         super(FwdBwdProfileMarkHook, self).__init__()
         self._sync = sync
+        self._argb_color = argb_color
 
     def forward_preprocess(self, function, in_data):
         _try_to_sync_if_needed(self)
-        super(FwdBwdProfileMarkHook, self).forward_preprocess(function, in_data)
+        _colored_range_push_if_exists(
+            function.label + '.forward', self._argb_color)
 
     def forward_postprocess(self, function, in_data):
         _try_to_sync_if_needed(self)
-        super(FwdBwdProfileMarkHook, self).forward_postprocess(function, in_data)
+        cuda.nvtx.RangePop()
 
     def backward_preprocess(self, function, in_data, out_grad):
         _try_to_sync_if_needed(self)
-        super(FwdBwdProfileMarkHook, self).backward_preprocess(function, in_data, out_grad)
+        _colored_range_push_if_exists(
+            function.label + '.backward', self._argb_color)
 
     def backward_postprocess(self, function, in_data, out_grad):
         _try_to_sync_if_needed(self)
-        super(FwdBwdProfileMarkHook, self).backward_postprocess(function, in_data, out_grad)
+        cuda.nvtx.RangePop()
 
 
 def _add_backward_mark(func, sync):
     def backward_wrapper(*args, **kwargs):
-        with prof.TimeRangeDecorator('model.backward', sync=sync):
-            with FwdBwdProfileMarkHook(sync=sync):
+        with prof.TimeRangeDecorator('model.backward', sync=sync, argb_color=_bwd_argb_color):
+            with FwdBwdProfileMarkHook(sync=sync, argb_color=_bwd_argb_color):
                 ret = func(*args, **kwargs)
         return ret
     return backward_wrapper
@@ -75,8 +88,8 @@ def make_wrapped_lossfunc(func, sync=True):
         raise ValueError('func is required.')
 
     def forward_wrapper(*args, **kwargs):
-        with prof.TimeRangeDecorator('model.forward', sync=sync):
-            with FwdBwdProfileMarkHook(sync=sync):
+        with prof.TimeRangeDecorator('model.forward', sync=sync, argb_color=_fwd_argb_color):
+            with FwdBwdProfileMarkHook(sync=sync, argb_color=_fwd_argb_color):
                 ret = func(*args, **kwargs)
         ret.backward = _add_backward_mark(ret.backward, sync)
         return ret
@@ -89,7 +102,8 @@ def _update_with_profiling_mark(self, lossfun=None, *args, **kwds):
 
 def _setup(self, link):
     ret = super(self.__class__, self).setup(link)
-    self.add_hook(UpdateProfileMarkPreHook(sync=self.sync_for_prof))
+    self.add_hook(UpdateProfileMarkPreHook(
+        sync=self.sync_for_prof, argb_color=_upd_argb_color))
     self.add_hook(UpdateProfileMarkPostHook(sync=self.sync_for_prof))
     return ret
 
