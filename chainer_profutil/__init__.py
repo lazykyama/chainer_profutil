@@ -1,3 +1,4 @@
 
 
 from chainer_profutil.profiled_optimizer import create_marked_profile_optimizer
+from chainer_profutil.profiled_optimizer import make_wrapped_lossfunc

@@ -61,6 +61,7 @@ class FwdBwdProfileMarkHook(CUDAProfileHook):
         _try_to_sync_if_needed(self)
         super(FwdBwdProfileMarkHook, self).backward_postprocess(function, in_data, out_grad)
 
+
 def _add_backward_mark(func, sync):
     def backward_wrapper(*args, **kwargs):
         with prof.TimeRangeDecorator('model.backward', sync=sync):
@@ -69,7 +70,10 @@ def _add_backward_mark(func, sync):
         return ret
     return backward_wrapper
 
-def _add_forward_mark(func, sync):
+def make_wrapped_lossfunc(func, sync=True):
+    if func is None:
+        raise ValueError('func is required.')
+
     def forward_wrapper(*args, **kwargs):
         with prof.TimeRangeDecorator('model.forward', sync=sync):
             with FwdBwdProfileMarkHook(sync=sync):
@@ -80,7 +84,7 @@ def _add_forward_mark(func, sync):
 
 def _update_with_profiling_mark(self, lossfun=None, *args, **kwds):
     if lossfun is not None:
-        lossfun = _add_forward_mark(lossfun, self.sync_for_prof)
+        lossfun = make_wrapped_lossfunc(lossfun, self.sync_for_prof)
     return super(self.__class__, self).update(lossfun, *args, **kwds)
 
 def _setup(self, link):
