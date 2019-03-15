@@ -13,7 +13,7 @@ optimizer = chainer.optimizers.Adam()
 optimizer.setup(model)
 ```
 
-![A profiling result without nvtx mark.](./docs/imgs/profiling_example_without_mark.png "A profiling result without nvtx mark.")
+[![A profiling result without nvtx mark.](./docs/imgs/profiling_example_without_mark_small.png "A profiling result without nvtx mark.")](./docs/imgs/profiling_example_without_mark.png)
 
 ### After
 
@@ -25,4 +25,4 @@ optimizer = create_marked_profile_optimizer(
 optimizer.setup(model)
 ```
 
-![A profiling result with nvtx mark.](./docs/imgs/profiling_example_with_mark.png "A profiling result with nvtx mark.")
+[![A profiling result with nvtx mark.](./docs/imgs/profiling_example_with_mark_small.png "A profiling result with nvtx mark.")](./docs/imgs/profiling_example_with_mark.png)
