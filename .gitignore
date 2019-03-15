@@ -123,4 +123,7 @@ dmypy.json
 ### Python Patch ###
 .venv/
 
+### nvprof result file ###
+*.nvvp
+
 # End of https://www.gitignore.io/api/python
