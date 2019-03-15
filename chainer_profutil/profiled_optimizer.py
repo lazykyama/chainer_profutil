@@ -1,5 +1,6 @@
 
 
+from chainer.optimizer import Optimizer
 from chainer.function_hooks import CUDAProfileHook
 
 from cupy import cuda
@@ -109,9 +110,9 @@ def _setup(self, link):
 
 
 def create_marked_profile_optimizer(basecls, sync=True):
-    if basecls:
-        # TODO: check if basecls is subclass of Optimizer.
-        pass
+    assert basecls, 'basecls is required.'
+    if not issubclass(basecls, (Optimizer, )):
+        raise RuntimeError('{} may not be Chainer\'s optimizer.')
 
     MarkedProfileOptimizer = type(
         'MarkedProfileOptimizer',
