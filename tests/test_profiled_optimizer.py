@@ -6,6 +6,7 @@ import numpy as np
 import unittest
 
 import chainer
+import chainer.links as L
 from chainer import optimizers
 
 from chainer_profutil import create_marked_profile_optimizer
@@ -79,3 +80,24 @@ class TestCreateMarkedProfileOptimizerError(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             create_marked_profile_optimizer(
                 basecls, sync=sync)
+
+    def test_fail_on_invalid_link(self):
+        class InvalidNetwork(chainer.Chain):
+            def __init__(self):
+                super(InvalidNetwork, self).__init__()
+                with self.init_scope():
+                    self.l1 = L.Linear(None, 100)
+                    self.l2 = L.Linear(None, 10)
+
+            def __call__(self, x):
+                h1 = F.relu(self.l1(x))
+                return self.l2(h1)
+
+        basecls = optimizers.SGD
+        sync = True
+
+        generate_func = create_marked_profile_optimizer(
+            basecls, sync=sync)
+        optimizer = generate_func()
+        with self.assertRaises(RuntimeError):
+            optimizer.setup(InvalidNetwork())

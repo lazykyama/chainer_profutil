@@ -87,6 +87,8 @@ def _add_backward_mark(func, sync, layerwise_sync):
 def make_wrapped_lossfunc(func, sync=True, layerwise_sync=False):
     if func is None:
         raise ValueError('func is required.')
+    if not hasattr(func, 'forward'):
+        raise RuntimeError('func must have forward method.')
 
     def forward_wrapper(*args, **kwargs):
         with prof.TimeRangeDecorator('model.forward', sync=sync, argb_color=_fwd_argb_color):
