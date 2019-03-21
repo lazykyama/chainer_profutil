@@ -9,7 +9,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='chainer_profutil',
-    version='0.0.1',
+    version='0.0.2',
     description='Chainer utility tool for GPU profiling by nvprof.',
     author='Kazuhiro Yamasaki',
     author_email='yamasaki.k.1101@gmail.com',
