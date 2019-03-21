@@ -91,20 +91,20 @@ def make_wrapped_lossfunc(func, sync=True, layerwise_sync=False):
     def forward_wrapper(*args, **kwargs):
         with prof.TimeRangeDecorator('model.forward', sync=sync, argb_color=_fwd_argb_color):
             with FwdBwdProfileMarkHook(sync=layerwise_sync, argb_color=_fwd_argb_color):
-                ret = func(*args, **kwargs)
+                ret = func._org_forward(*args, **kwargs)
         ret.backward = _add_backward_mark(ret.backward, sync, layerwise_sync)
         return ret
-    return forward_wrapper
 
-def _update_with_profiling_mark(self, lossfun=None, *args, **kwds):
-    if lossfun is not None:
-        lossfun = make_wrapped_lossfunc(
-            lossfun,
-            sync=self.sync_for_prof,
-            layerwise_sync=self.layerwise_sync_for_prof)
-    return super(self.__class__, self).update(lossfun, *args, **kwds)
+    func._org_forward = func.forward
+    func.forward = forward_wrapper
+    return func
 
 def _setup(self, link):
+    make_wrapped_lossfunc(
+        link,
+        sync=self.sync_for_prof,
+        layerwise_sync=self.layerwise_sync_for_prof)
+
     ret = super(self.__class__, self).setup(link)
     self.add_hook(UpdateProfileMarkPreHook(
         sync=self.sync_for_prof, argb_color=_upd_argb_color))
@@ -112,7 +112,8 @@ def _setup(self, link):
     return ret
 
 
-def create_marked_profile_optimizer(basecls, sync=True, layerwise_sync=False):
+def create_marked_profile_optimizer(
+        basecls, sync=True, layerwise_sync=False):
     assert basecls, 'basecls is required.'
     if not issubclass(basecls, (Optimizer, )):
         raise RuntimeError('{} may not be Chainer\'s optimizer.')
@@ -120,8 +121,7 @@ def create_marked_profile_optimizer(basecls, sync=True, layerwise_sync=False):
     MarkedProfileOptimizer = type(
         'MarkedProfileOptimizer',
         (basecls, ),
-        {'update': _update_with_profiling_mark,
-         'setup': _setup})
+        {'setup': _setup})
     def make_instance(*args, **kwargs):
         optimizer = MarkedProfileOptimizer(*args, **kwargs)
         optimizer.sync_for_prof = sync
