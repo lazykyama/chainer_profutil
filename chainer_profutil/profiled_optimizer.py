@@ -98,7 +98,10 @@ def make_wrapped_lossfunc(func, sync=True, layerwise_sync=False):
 
 def _update_with_profiling_mark(self, lossfun=None, *args, **kwds):
     if lossfun is not None:
-        lossfun = make_wrapped_lossfunc(lossfun, self.sync_for_prof)
+        lossfun = make_wrapped_lossfunc(
+            lossfun,
+            sync=self.sync_for_prof,
+            layerwise_sync=self.layerwise_sync_for_prof)
     return super(self.__class__, self).update(lossfun, *args, **kwds)
 
 def _setup(self, link):
