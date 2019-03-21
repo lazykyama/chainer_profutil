@@ -1,5 +1,8 @@
 # Large Scale ConvNets
 
+This example is almost same as original chainer's example.
+https://github.com/chainer/chainer/tree/v5.3.0/examples/imagenet
+
 ## Requirements
 
 - Pillow (Pillow requires an external library that corresponds to the image format)
