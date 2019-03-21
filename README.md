@@ -9,7 +9,7 @@ Adding 2 lines is all you need. First, import a function. Second, call it.
 ### Before.
 
 ```python
-optimizer = chainer.optimizers.Adam()
+optimizer = chainer.optimizers.Adam(alpha=0.001)
 optimizer.setup(model)
 ```
 
@@ -21,7 +21,7 @@ optimizer.setup(model)
 from chainer_profutil import create_marked_profile_optimizer
 
 optimizer = create_marked_profile_optimizer(
-    chainer.optimizers.Adam, sync=True)()
+    chainer.optimizers.Adam, sync=True)(alpha=0.001)
 optimizer.setup(model)
 ```
 
