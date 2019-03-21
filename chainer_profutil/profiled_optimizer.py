@@ -76,23 +76,23 @@ class FwdBwdProfileMarkHook(CUDAProfileHook):
         cuda.nvtx.RangePop()
 
 
-def _add_backward_mark(func, sync):
+def _add_backward_mark(func, sync, layerwise_sync):
     def backward_wrapper(*args, **kwargs):
         with prof.TimeRangeDecorator('model.backward', sync=sync, argb_color=_bwd_argb_color):
-            with FwdBwdProfileMarkHook(sync=sync, argb_color=_bwd_argb_color):
+            with FwdBwdProfileMarkHook(sync=layerwise_sync, argb_color=_bwd_argb_color):
                 ret = func(*args, **kwargs)
         return ret
     return backward_wrapper
 
-def make_wrapped_lossfunc(func, sync=True):
+def make_wrapped_lossfunc(func, sync=True, layerwise_sync=False):
     if func is None:
         raise ValueError('func is required.')
 
     def forward_wrapper(*args, **kwargs):
         with prof.TimeRangeDecorator('model.forward', sync=sync, argb_color=_fwd_argb_color):
-            with FwdBwdProfileMarkHook(sync=sync, argb_color=_fwd_argb_color):
+            with FwdBwdProfileMarkHook(sync=layerwise_sync, argb_color=_fwd_argb_color):
                 ret = func(*args, **kwargs)
-        ret.backward = _add_backward_mark(ret.backward, sync)
+        ret.backward = _add_backward_mark(ret.backward, sync, layerwise_sync)
         return ret
     return forward_wrapper
 
@@ -109,7 +109,7 @@ def _setup(self, link):
     return ret
 
 
-def create_marked_profile_optimizer(basecls, sync=True):
+def create_marked_profile_optimizer(basecls, sync=True, layerwise_sync=False):
     assert basecls, 'basecls is required.'
     if not issubclass(basecls, (Optimizer, )):
         raise RuntimeError('{} may not be Chainer\'s optimizer.')
@@ -122,6 +122,7 @@ def create_marked_profile_optimizer(basecls, sync=True):
     def make_instance(*args, **kwargs):
         optimizer = MarkedProfileOptimizer(*args, **kwargs)
         optimizer.sync_for_prof = sync
+        optimizer.layerwise_sync_for_prof = layerwise_sync
         return optimizer
 
     return make_instance
