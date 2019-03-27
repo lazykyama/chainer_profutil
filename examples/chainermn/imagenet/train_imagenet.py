@@ -199,10 +199,10 @@ def main():
 
     # Create a multi node optimizer from a standard Chainer optimizer.
     if args.nvtx_mark:
-        optimizer = chainermn.create_multi_node_optimizer(
-            create_marked_profile_optimizer(
-                chainer.optimizers.MomentumSGD)(lr=0.01, momentum=0.9),
-            comm)
+        optimizer = create_marked_profile_optimizer(
+            chainermn.create_multi_node_optimizer(
+                chainer.optimizers.MomentumSGD(lr=0.01, momentum=0.9),
+                comm))
     else:
         optimizer = chainermn.create_multi_node_optimizer(
             chainer.optimizers.MomentumSGD(lr=0.01, momentum=0.9), comm)

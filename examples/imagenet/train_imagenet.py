@@ -169,7 +169,7 @@ def main():
     # Set up an optimizer
     if args.nvtx_mark:
         optimizer = create_marked_profile_optimizer(
-            chainer.optimizers.MomentumSGD)(lr=0.01, momentum=0.9)
+            chainer.optimizers.MomentumSGD(lr=0.01, momentum=0.9))
     else:
         optimizer = chainer.optimizers.MomentumSGD(lr=0.01, momentum=0.9)
     optimizer.setup(model)

@@ -40,19 +40,21 @@ class UpdateProfileMarkPreHook(object):
         self._argb_color = argb_color
 
     def __call__(self, rule):
-        range_push(self._sync, 'update', self._argb_color)
+        range_push(self._sync, 'model.update', self._argb_color)
 
 class UpdateProfileMarkPostHook(object):
     name = 'postupdate'
     call_for_each_param = False
     timing = 'post'
 
-    def __init__(self, sync=True):
+    def __init__(self, sync=True, seprately_mark_for_iter=False):
         self._sync = sync
+        self._seprately_mark_for_iter = seprately_mark_for_iter
 
     def __call__(self, rule):
-        range_pop(self._sync)  # pop 'update'
-        range_pop(self._sync)  # pop 'iteration'
+        range_pop(self._sync)  # pop 'model.update'
+        if self._seprately_mark_for_iter:
+            range_pop(self._sync)  # pop 'iteration'
 
 
 class FwdBwdProfileMarkHook(CUDAProfileHook):
@@ -89,14 +91,19 @@ def _add_backward_mark(func, sync, layerwise_sync):
         return ret
     return backward_wrapper
 
-def make_wrapped_lossfunc(func, sync=True, layerwise_sync=False):
+
+def make_wrapped_lossfunc(func,
+                          sync=True,
+                          layerwise_sync=False,
+                          seprately_mark_for_iter=True):
     if func is None:
         raise ValueError('func is required.')
     if not hasattr(func, 'forward'):
         raise RuntimeError('func must have forward method.')
 
     def forward_wrapper(*args, **kwargs):
-        range_push(sync, 'iteration', _itr_argb_color)
+        if seprately_mark_for_iter:
+            range_push(sync, 'iteration', _itr_argb_color)
 
         with prof.TimeRangeDecorator('model.forward', sync=sync, argb_color=_fwd_argb_color):
             with FwdBwdProfileMarkHook(sync=layerwise_sync, argb_color=_fwd_argb_color):
@@ -108,33 +115,75 @@ def make_wrapped_lossfunc(func, sync=True, layerwise_sync=False):
     func.forward = forward_wrapper
     return func
 
-def _setup(self, link):
-    make_wrapped_lossfunc(
-        link,
-        sync=self.sync_for_prof,
-        layerwise_sync=self.layerwise_sync_for_prof)
 
-    ret = super(self.__class__, self).setup(link)
-    self.add_hook(UpdateProfileMarkPreHook(
-        sync=self.sync_for_prof, argb_color=_upd_argb_color))
-    self.add_hook(UpdateProfileMarkPostHook(sync=self.sync_for_prof))
-    return ret
+class _MarkedProfileOptimizerBase(object):
+    def __init__(self, actual_optimizer, sync=False, layerwise_sync=False):
+        super(_MarkedProfileOptimizerBase, self).__setattr__(
+            'actual_optimizer', actual_optimizer)
+        super(_MarkedProfileOptimizerBase, self).__setattr__(
+            '_sync', sync)
+        super(_MarkedProfileOptimizerBase, self).__setattr__(
+            '_layerwise_sync', layerwise_sync)
+
+    def _setup(self, link, seprately_mark_for_iter=True):
+        make_wrapped_lossfunc(
+            link,
+            sync=self._sync,
+            layerwise_sync=self._layerwise_sync,
+            seprately_mark_for_iter=seprately_mark_for_iter)
+        ret = self.actual_optimizer.setup(link)
+
+        self.actual_optimizer.add_hook(
+            UpdateProfileMarkPreHook(sync=self._sync,
+                                     argb_color=_upd_argb_color))
+        self.actual_optimizer.add_hook(
+            UpdateProfileMarkPostHook(sync=self._sync,
+                                      seprately_mark_for_iter=seprately_mark_for_iter))
+
+        return ret
+
+    def __getattr__(self, attr_name):
+        return getattr(self.actual_optimizer, attr_name)
+
+    def __setattr__(self, attr_name, value):
+        setattr(self.actual_optimizer, attr_name, value)
+
+class _MarkedProfileOptimizer(_MarkedProfileOptimizerBase):
+    def __init__(self, actual_optimizer, sync=False, layerwise_sync=False):
+        super(_MarkedProfileOptimizer, self).__init__(
+            actual_optimizer, sync=sync, layerwise_sync=layerwise_sync)
+
+    def setup(self, link):
+        return self._setup(link, seprately_mark_for_iter=True)
+
+class _MarkedProfileOptimizerForMN(_MarkedProfileOptimizerBase):
+    def __init__(self, actual_optimizer, sync=False, layerwise_sync=False):
+        super(_MarkedProfileOptimizerForMN, self).__init__(
+            actual_optimizer, sync=sync, layerwise_sync=layerwise_sync)
+
+    def setup(self, link):
+        return self._setup(link, seprately_mark_for_iter=False)
+
+    def update(self, lossfun=None, *args, **kwds):
+        with prof.TimeRangeDecorator('iteration',
+                                     sync=self._sync,
+                                     argb_color=_itr_argb_color):
+            ret = self.actual_optimizer.update(lossfun,
+                                               *args,
+                                               **kwds)
+        return ret
 
 
 def create_marked_profile_optimizer(
-        basecls, sync=True, layerwise_sync=False):
-    assert basecls, 'basecls is required.'
-    if not issubclass(basecls, (Optimizer, )):
-        raise RuntimeError('{} may not be Chainer\'s optimizer.')
+        actual_optimizer, sync=True, layerwise_sync=False):
+    assert actual_optimizer is not None, 'actual_optimizer is required.'
+    if issubclass(actual_optimizer.__class__, Optimizer):
+        optimizer = _MarkedProfileOptimizer(actual_optimizer,
+                                            sync=sync,
+                                            layerwise_sync=layerwise_sync)
+    else:
+        optimizer = _MarkedProfileOptimizerForMN(actual_optimizer,
+                                                 sync=sync,
+                                                 layerwise_sync=layerwise_sync)
 
-    MarkedProfileOptimizer = type(
-        'MarkedProfileOptimizer',
-        (basecls, ),
-        {'setup': _setup})
-    def make_instance(*args, **kwargs):
-        optimizer = MarkedProfileOptimizer(*args, **kwargs)
-        optimizer.sync_for_prof = sync
-        optimizer.layerwise_sync_for_prof = layerwise_sync
-        return optimizer
-
-    return make_instance
+    return optimizer

@@ -75,7 +75,7 @@ def main():
     # Setup an optimizer
     if args.nvtx_mark:
         optimizer = create_marked_profile_optimizer(
-            chainer.optimizers.Adam, sync=True)(alpha=0.001)
+            chainer.optimizers.Adam(alpha=0.001), sync=True)
     else:
         optimizer = chainer.optimizers.Adam(alpha=0.001)
     optimizer.setup(model)
