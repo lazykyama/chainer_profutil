@@ -26,3 +26,16 @@ optimizer.setup(model)
 ```
 
 [![A profiling result with nvtx mark.](./docs/imgs/profiling_example_with_mark_small.png "A profiling result with nvtx mark.")](./docs/imgs/profiling_example_with_mark.png)
+
+## Example for ChainerMN.
+
+When you use ChainerMN's `create_multi_node_optimizer()`, you need to give an instance returned from `create_multi_node_optimizer()` to `create_marked_profile_optimizer()` as follows.
+
+```python
+optimizer = create_marked_profile_optimizer(
+    chainermn.create_multi_node_optimizer(
+        chainer.optimizers.MomentumSGD(lr=0.01, momentum=0.9),
+        comm),
+    sync=False)
+optimizer.setup(model)
+```
