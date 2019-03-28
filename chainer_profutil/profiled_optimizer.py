@@ -85,7 +85,7 @@ class FwdBwdProfileMarkHook(CUDAProfileHook):
 
 def _add_backward_mark(func, sync, layerwise_sync):
     def backward_wrapper(*args, **kwargs):
-        with prof.TimeRangeDecorator('model.backward', sync=sync, argb_color=_bwd_argb_color):
+        with prof.time_range('model.backward', sync=sync, argb_color=_bwd_argb_color):
             with FwdBwdProfileMarkHook(sync=layerwise_sync, argb_color=_bwd_argb_color):
                 ret = func(*args, **kwargs)
         return ret
@@ -105,7 +105,7 @@ def make_wrapped_lossfunc(func,
         if seprately_mark_for_iter:
             range_push(sync, 'iteration', _itr_argb_color)
 
-        with prof.TimeRangeDecorator('model.forward', sync=sync, argb_color=_fwd_argb_color):
+        with prof.time_range('model.forward', sync=sync, argb_color=_fwd_argb_color):
             with FwdBwdProfileMarkHook(sync=layerwise_sync, argb_color=_fwd_argb_color):
                 ret = func._org_forward(*args, **kwargs)
         ret.backward = _add_backward_mark(ret.backward, sync, layerwise_sync)
@@ -165,9 +165,9 @@ class _MarkedProfileOptimizerForMN(_MarkedProfileOptimizerBase):
         return self._setup(link, seprately_mark_for_iter=False)
 
     def update(self, lossfun=None, *args, **kwds):
-        with prof.TimeRangeDecorator('iteration',
-                                     sync=self._sync,
-                                     argb_color=_itr_argb_color):
+        with prof.time_range('iteration',
+                             sync=self._sync,
+                             argb_color=_itr_argb_color):
             ret = self.actual_optimizer.update(lossfun,
                                                *args,
                                                **kwds)
