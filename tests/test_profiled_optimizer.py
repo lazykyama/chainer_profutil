@@ -12,6 +12,7 @@ from chainer import optimizers
 import chainermn
 
 from chainer_profutil import create_marked_profile_optimizer
+from chainer_profutil import SyncLevel
 from chainer_profutil.profiled_optimizer import _MarkedProfileOptimizer
 from chainer_profutil.profiled_optimizer import _MarkedProfileOptimizerForMN
 
@@ -84,3 +85,15 @@ class TestCreateMarkedProfileOptimizerError(unittest.TestCase):
             optimizers.SGD(), sync=True)
         with self.assertRaises(RuntimeError):
             optimizer.setup(InvalidNetwork())
+
+    def test_fail_on_invalid_sync_level(self):
+        with self.assertRaises(AssertionError):
+            optimizer = create_marked_profile_optimizer(
+                optimizers.SGD(lr=1.0),
+                sync=True, sync_level=SyncLevel.COARSEST-1)
+
+        with self.assertRaises(AssertionError):
+            optimizer = create_marked_profile_optimizer(
+                optimizers.SGD(lr=1.0),
+                sync=True, sync_level=SyncLevel.FINEST+1)
+
