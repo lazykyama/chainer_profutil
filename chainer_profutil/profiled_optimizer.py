@@ -107,11 +107,14 @@ class FwdBwdProfileMarkHook(CUDAProfileHook):
         range_pop(self._sync)
 
 
-class VariableWrapper(object):
-    def __init__(self, loss, sync, sync_level):
-        self._loss = loss
-        self._sync = sync
-        self._sync_level = sync_level
+class _VariableWrapper(object):
+    def __init__(self, variable, sync, sync_level):
+        super(_VariableWrapper, self).__setattr__(
+            '_variable', variable)
+        super(_VariableWrapper, self).__setattr__(
+            '_sync', sync)
+        super(_VariableWrapper, self).__setattr__(
+            '_sync_level', sync_level)
 
     def backward(self, *args, **kwargs):
         if not self._sync:
@@ -123,8 +126,14 @@ class VariableWrapper(object):
 
         with prof.time_range('model.backward', sync=bwd_sync, argb_color=_bwd_argb_color):
             with FwdBwdProfileMarkHook(sync=bwd_each_sync, argb_color=_bwd_argb_color):
-                ret = self._loss.backward(*args, **kwargs)
+                ret = self._variable.backward(*args, **kwargs)
         return ret
+
+    def __getattr__(self, attr_name):
+        return getattr(self._variable, attr_name)
+
+    def __setattr__(self, attr_name, value):
+        setattr(self._variable, attr_name, value)
 
 
 def make_wrapped_link(link,
@@ -152,7 +161,7 @@ def make_wrapped_link(link,
         with prof.time_range('model.forward', sync=fwd_sync, argb_color=_fwd_argb_color):
             with FwdBwdProfileMarkHook(sync=fwd_each_sync, argb_color=_fwd_argb_color):
                 loss = link._org_forward(*args, **kwargs)
-        return VariableWrapper(loss, sync, sync_level)
+        return _VariableWrapper(loss, sync, sync_level)
 
     link._org_forward = link.forward
     link.forward = forward_wrapper
