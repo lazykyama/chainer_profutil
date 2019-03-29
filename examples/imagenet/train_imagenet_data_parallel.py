@@ -106,11 +106,10 @@ def main():
         val, args.val_batchsize, repeat=False, n_processes=args.loaderjob)
 
     # Set up an optimizer
+    optimizer = chainer.optimizers.MomentumSGD(lr=0.01, momentum=0.9)
     if args.nvtx_mark:
         optimizer = create_marked_profile_optimizer(
-            chainer.optimizers.MomentumSGD(lr=0.01, momentum=0.9))
-    else:
-        optimizer = chainer.optimizers.MomentumSGD(lr=0.01, momentum=0.9)
+            optimizer, sync=True, sync_level=2)
     optimizer.setup(model)
 
     # Set up a trainer

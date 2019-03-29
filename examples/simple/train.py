@@ -73,11 +73,10 @@ def main():
         model.to_gpu()  # Copy the model to the GPU
 
     # Setup an optimizer
+    optimizer = chainer.optimizers.Adam(alpha=0.001)
     if args.nvtx_mark:
         optimizer = create_marked_profile_optimizer(
-            chainer.optimizers.Adam(alpha=0.001), sync=True)
-    else:
-        optimizer = chainer.optimizers.Adam(alpha=0.001)
+            optimizer, sync=True, sync_level=2)
     optimizer.setup(model)
 
     # Load the MNIST dataset

@@ -198,14 +198,11 @@ def main():
         val, args.val_batchsize, repeat=False, n_processes=args.loaderjob)
 
     # Create a multi node optimizer from a standard Chainer optimizer.
+    optimizer = chainermn.create_multi_node_optimizer(
+        chainer.optimizers.MomentumSGD(lr=0.01, momentum=0.9), comm)
     if args.nvtx_mark:
         optimizer = create_marked_profile_optimizer(
-            chainermn.create_multi_node_optimizer(
-                chainer.optimizers.MomentumSGD(lr=0.01, momentum=0.9),
-                comm))
-    else:
-        optimizer = chainermn.create_multi_node_optimizer(
-            chainer.optimizers.MomentumSGD(lr=0.01, momentum=0.9), comm)
+            optimizer, sync=True, sync_level=2)
     optimizer.setup(model)
 
     # Set up a trainer
