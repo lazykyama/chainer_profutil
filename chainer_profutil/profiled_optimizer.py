@@ -107,32 +107,36 @@ class FwdBwdProfileMarkHook(CUDAProfileHook):
         range_pop(self._sync)
 
 
-def _add_backward_mark(func, sync, sync_level):
-    def backward_wrapper(*args, **kwargs):
-        if not sync:
+class VariableWrapper(object):
+    def __init__(self, loss, sync, sync_level):
+        self._loss = loss
+        self._sync = sync
+        self._sync_level = sync_level
+
+    def backward(self, *args, **kwargs):
+        if not self._sync:
             bwd_sync = False
             bwd_each_sync = False
         else:
-            bwd_sync = (sync_level >= SyncLevel.SECOND)
-            bwd_each_sync = (sync_level >= SyncLevel.FINEST)
+            bwd_sync = (self._sync_level >= SyncLevel.SECOND)
+            bwd_each_sync = (self._sync_level >= SyncLevel.FINEST)
 
         with prof.time_range('model.backward', sync=bwd_sync, argb_color=_bwd_argb_color):
             with FwdBwdProfileMarkHook(sync=bwd_each_sync, argb_color=_bwd_argb_color):
-                ret = func(*args, **kwargs)
+                ret = self._loss.backward(*args, **kwargs)
         return ret
-    return backward_wrapper
 
 
-def make_wrapped_lossfunc(func,
-                          sync=True,
-                          sync_level=SyncLevel.COARSEST,
-                          seprately_mark_for_iter=True):
+def make_wrapped_link(link,
+                      sync=True,
+                      sync_level=SyncLevel.COARSEST,
+                      seprately_mark_for_iter=True):
     assert SyncLevel.COARSEST <= sync_level <= SyncLevel.FINEST, \
         'Unexpected sync_level: {}'.format(sync_level)
-    if func is None:
-        raise ValueError('func is required.')
-    if not hasattr(func, 'forward'):
-        raise RuntimeError('func must have forward method.')
+    if link is None:
+        raise ValueError('link is required.')
+    if not hasattr(link, 'forward'):
+        raise RuntimeError('link must have forward method.')
 
     def forward_wrapper(*args, **kwargs):
         if seprately_mark_for_iter and sync_level >= SyncLevel.COARSEST:
@@ -147,13 +151,12 @@ def make_wrapped_lossfunc(func,
 
         with prof.time_range('model.forward', sync=fwd_sync, argb_color=_fwd_argb_color):
             with FwdBwdProfileMarkHook(sync=fwd_each_sync, argb_color=_fwd_argb_color):
-                ret = func._org_forward(*args, **kwargs)
-        ret.backward = _add_backward_mark(ret.backward, sync, sync_level)
-        return ret
+                loss = link._org_forward(*args, **kwargs)
+        return VariableWrapper(loss, sync, sync_level)
 
-    func._org_forward = func.forward
-    func.forward = forward_wrapper
-    return func
+    link._org_forward = link.forward
+    link.forward = forward_wrapper
+    return link
 
 
 class _MarkedProfileOptimizerBase(object):
@@ -166,7 +169,7 @@ class _MarkedProfileOptimizerBase(object):
             '_sync_level', sync_level)
 
     def _setup(self, link, seprately_mark_for_iter=True):
-        make_wrapped_lossfunc(
+        make_wrapped_link(
             link,
             sync=self._sync,
             sync_level=self._sync_level,
