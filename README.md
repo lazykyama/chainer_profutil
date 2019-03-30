@@ -1,6 +1,6 @@
 # chainer_profutil
 
-This is an UNOFFICIAL Chainer related tool. This tool helps you to find forward, backward and update part from profiling details when you use NVIDIA Visual Profiler. As a result, you can improve your workload more efficiently.
+This is an UNOFFICIAL Chainer related tool. This tool helps you to find forward, backward and update part from profiling details when you use NVIDIA Visual Profiler ([https://developer.nvidia.com/nvidia-visual-profiler](https://developer.nvidia.com/nvidia-visual-profiler) / [https://docs.nvidia.com/cuda/profiler-users-guide/index.html](https://docs.nvidia.com/cuda/profiler-users-guide/index.html)). As a result, you can improve your workload more efficiently.
 
 ## How to use.
 
@@ -8,6 +8,11 @@ This is an UNOFFICIAL Chainer related tool. This tool helps you to find forward,
 2. Run your code via `nvprof` (eg. `nvprof -o prof.nvvp python main.py ...`)
 3. Load `prof.nvvp` to NVIDIA Visual Profiler `nvvp`
 4. Enjoy your profiling and accelerating!
+
+### To track all child processes when using ChainerMN and/or `MultiprocessParallelUpdater`.
+
+Additional option, `--profile-child-processes`, makes it to track all child processes.
+In addition, the profiler adds each process ID into the file name by using `%p` like `prof%p.nvvp`.
 
 ## Simple example.
 
