@@ -2,6 +2,13 @@
 
 This is an UNOFFICIAL Chainer related tool. This tool helps you to find forward, backward and update part from profiling details when you use NVIDIA Visual Profiler. As a result, you can improve your workload more efficiently.
 
+## How to use.
+
+1. Change your code according to example codes below
+2. Run your code via `nvprof` (eg. `nvprof -o prof.nvvp python main.py ...`)
+3. Load `prof.nvvp` to NVIDIA Visual Profiler `nvvp`
+4. Enjoy your profiling and accelerating!
+
 ## Simple example.
 
 Adding 2 lines is all you need. First, import a function. Second, call it.
