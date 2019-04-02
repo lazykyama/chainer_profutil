@@ -72,14 +72,14 @@ When you disable synchronize mode (ie., `sync=False`), then all markers don't sy
 
 When you enable synchronize mode (ie., `sync=True`), then some markers synchronize corresponding GPU kernels and other markers are asynchronous.
 
-At level 1, highest marker only synchronizes at the being and end of 1 iteration.
+At level 1 (ie., `sync_level=1`), highest marker only synchronizes at the being and end of 1 iteration.
 
 [![Synchronization level 1 markers.](./docs/imgs/sync_lv1_small.png "Synchronization level 1 markers.")](./docs/imgs/sync_lv1.png)
 
-At level 2, forward/backward/update markers synchronize at the begin and end of corresponding kernels.
+At level 2 (ie., `sync_level=2`), forward/backward/update markers synchronize at the begin and end of corresponding kernels.
 
 [![Synchronization level 2 markers.](./docs/imgs/sync_lv2_small.png "Synchronization level 2 markers.")](./docs/imgs/sync_lv2.png)
 
-On level 3, all markers synchronize corresponding kernels.
+On level 3 (ie., `sync_level=3`), all markers synchronize corresponding kernels.
 
 [![Synchronization level 3 markers.](./docs/imgs/sync_lv3_small.png "Synchronization level 3 markers.")](./docs/imgs/sync_lv3.png)
