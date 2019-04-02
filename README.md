@@ -27,7 +27,7 @@ optimizer.setup(model)
 
 [![A profiling result without nvtx mark.](./docs/imgs/profiling_example_without_mark_small.png "A profiling result without nvtx mark.")](./docs/imgs/profiling_example_without_mark.png)
 
-### After
+### After.
 
 ```python
 from chainer_profutil import create_marked_profile_optimizer
@@ -51,3 +51,35 @@ optimizer = create_marked_profile_optimizer(
     sync=False)
 optimizer.setup(model)
 ```
+
+## Profiling tips.
+
+### Reducing the number of iterations.
+
+A training script usually runs training procedure at multiple epochs.
+But, the size of `nvprof` output becomes large if the training runs for long hours.
+
+Therefore, we strongly recommend that you add an additional option to your code corresponding to the number of iterations.
+If this iteration option is given, then a script stops by the given iteration instaed of epochs.
+By this change, we can get relatively small profiling output and operate it by NVIDIA Visual Profiler.
+
+### Synchronization level.
+
+This tool has 3 synchronization levels and sync/async switch. Each level corresponds to each marker.
+When you disable synchronize mode (ie., `sync=False`), then all markers don't synchronize all GPU kernels as below.
+
+[![Asynchronous markers.](./docs/imgs/async_small.png "Asynchronous markers.")](./docs/imgs/async.png)
+
+When you enable synchronize mode (ie., `sync=True`), then some markers synchronize corresponding GPU kernels and other markers are asynchronous.
+
+At level 1, highest marker only synchronizes at the being and end of 1 iteration.
+
+[![Synchronization level 1 markers.](./docs/imgs/sync_lv1_small.png "Synchronization level 1 markers.")](./docs/imgs/sync_lv1.png)
+
+At level 2, forward/backward/update markers synchronize at the begin and end of corresponding kernels.
+
+[![Synchronization level 2 markers.](./docs/imgs/sync_lv2_small.png "Synchronization level 2 markers.")](./docs/imgs/sync_lv2.png)
+
+On level 3, all markers synchronize corresponding kernels.
+
+[![Synchronization level 3 markers.](./docs/imgs/sync_lv3_small.png "Synchronization level 3 markers.")](./docs/imgs/sync_lv3.png)
