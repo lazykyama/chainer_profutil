@@ -1,8 +1,9 @@
 # chainer_profutil
 
-This is an UNOFFICIAL Chainer related tool. This tool helps you to find forward, backward and update part from profiling details when you use NVIDIA Visual Profiler ([https://developer.nvidia.com/nvidia-visual-profiler](https://developer.nvidia.com/nvidia-visual-profiler) / [https://docs.nvidia.com/cuda/profiler-users-guide/index.html](https://docs.nvidia.com/cuda/profiler-users-guide/index.html)). As a result, you can improve your workload more efficiently.
+This is an UNOFFICIAL Chainer related tool. This tool helps you to find forward, backward and update part from profiling details when you use NVIDIA Visual Profiler ([https://developer.nvidia.com/nvidia-visual-profiler](https://developer.nvidia.com/nvidia-visual-profiler) / [https://docs.nvidia.com/cuda/profiler-users-guide/index.html](https://docs.nvidia.com/cuda/profiler-users-guide/index.html)) or NVIDIA Nsight Systems ([https://developer.nvidia.com/nsight-systems](https://developer.nvidia.com/nsight-systems) / [https://docs.nvidia.com/nsight-systems/#nsight_systems/2019.3.1-x86/01-overview.htm](https://docs.nvidia.com/nsight-systems/#nsight_systems/2019.3.1-x86/01-overview.htm)).
+As a result, you can improve your workload more efficiently.
 
-## How to use.
+## How to use in case of  NVIDIA Visual Profiler
 
 1. Change your code according to example codes below
 2. Run your code via `nvprof` (eg. `nvprof -o prof.nvvp python main.py ...`)
@@ -13,6 +14,13 @@ This is an UNOFFICIAL Chainer related tool. This tool helps you to find forward,
 
 Additional option, `--profile-child-processes`, makes it to track all child processes.
 In addition, the profiler adds each process ID into the file name by using `%p` like `prof%p.nvvp`.
+
+## How to use in case of NVIDIA Nsight Systems
+
+1. Change your code according to example codes below
+2. Run your code via `nsys` (eg. `nsys profile --trace cuda,cublas,cudnn,nvtx,osrt python3 train.py ...`)
+3. Load `report1.qdstrm` to NVIDIA Nsight Systems GUI
+4. Let's analyze your bottleneck
 
 ## Simple example.
 
